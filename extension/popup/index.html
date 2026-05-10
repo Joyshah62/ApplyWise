@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <div class="header">
+    <div class="header-content">
+      <div class="logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+        </svg>
+        <span>ApplyWise</span>
+      </div>
+      <a href="#" id="signout-btn" class="signout hidden">Sign Out</a>
+    </div>
+  </div>
+
+  <!-- ── Login View ─────────────────────────────────────── -->
+  <div id="login-view" class="view hidden">
+    <div class="login-container">
+      <div class="login-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <h2>Welcome back</h2>
+      <p>Sign in to track your applications.</p>
+      <form id="login-form">
+        <div class="form-group">
+          <input type="email" id="login_email" placeholder="Email address" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <input type="password" id="login_password" placeholder="Password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        <div id="login-error" class="message"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Loading View ───────────────────────────────────── -->
+  <div id="loading-view" class="view">
+    <div class="loading-container">
+      <div class="loader"></div>
+      <p>Scanning job posting…</p>
+    </div>
+  </div>
+
+  <!-- ── Form View ──────────────────────────────────────── -->
+  <div id="form-view" class="view hidden">
+
+    <!-- Detection status banner -->
+    <div id="detection-banner" class="detection-banner hidden">
+      <span id="detection-icon" class="detection-icon"></span>
+      <span id="detection-text"></span>
+    </div>
+
+    <form id="app-form">
+
+      <!-- Company + Role -->
+      <div class="form-row">
+        <div class="form-group half">
+          <label>
+            Company
+            <span class="auto-badge hidden" id="company-badge">auto</span>
+          </label>
+          <input type="text" id="company_name" placeholder="Google" required>
+        </div>
+        <div class="form-group half">
+          <label>
+            Role
+            <span class="auto-badge hidden" id="title-badge">auto</span>
+          </label>
+          <input type="text" id="job_title" placeholder="Software Engineer" required>
+        </div>
+      </div>
+
+      <!-- Location -->
+      <div class="form-group">
+        <label>
+          Location
+          <span class="auto-badge hidden" id="location-badge">auto</span>
+        </label>
+        <input type="text" id="location" placeholder="San Francisco, CA or Remote">
+      </div>
+
+      <!-- Portal + Status -->
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Portal</label>
+          <select id="portal">
+            <option value="Direct">Direct / Company</option>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="Greenhouse">Greenhouse</option>
+            <option value="Lever">Lever</option>
+            <option value="Indeed">Indeed</option>
+            <option value="Glassdoor">Glassdoor</option>
+            <option value="Workday">Workday</option>
+            <option value="Ashby">Ashby</option>
+            <option value="SmartRecruiters">SmartRecruiters</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group half">
+          <label>Status</label>
+          <select id="status">
+            <option value="Saved">Saved</option>
+            <option value="Applied" selected>Applied</option>
+            <option value="Assessment">Assessment</option>
+            <option value="Interview">Interview</option>
+            <option value="Offer">Offer</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Withdrawn">Withdrawn</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Resume Used -->
+      <div class="form-group">
+        <label>Resume Used</label>
+        <div class="resume-select-wrapper" style="display: flex; gap: 8px;">
+          <select id="resume_version_id" style="flex: 1;">
+            <option value="">— Select resume —</option>
+          </select>
+          <button type="button" id="analyze-btn" class="btn btn-secondary" style="padding: 0 12px; font-size: 12px; white-space: nowrap; height: 38px;">
+            Analyze Fit
+          </button>
+        </div>
+      </div>
+
+      <!-- Analysis Results -->
+      <div id="analysis-results" class="analysis-results hidden" style="margin-bottom: 16px; background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 8px; padding: 12px; font-size: 12px;">
+        <h4 style="margin: 0 0 8px 0; color: #3730A3; font-size: 13px;">Resume Analysis</h4>
+        <div id="analysis-content"></div>
+      </div>
+
+      <!-- Job URL display bar -->
+      <div class="url-bar">
+        <svg class="url-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        <span id="url-display" class="url-text">—</span>
+      </div>
+
+      <input type="hidden" id="job_url">
+
+      <!-- Actions -->
+      <div class="actions">
+        <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button type="submit" id="save-btn" class="btn btn-primary">Save Application</button>
+      </div>
+
+      <div id="status-message" class="message"></div>
+    </form>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
