@@ -185,6 +185,7 @@ function startExtraction() {
 
       document.getElementById('form-view').classList.remove('hidden');
       setupAnalyzeButton();
+      setupCoverLetterButton();
     });
   });
 }
@@ -257,6 +258,196 @@ function setupAnalyzeButton() {
       analyzeBtn.innerText = 'Analyze Fit';
     }
   });
+}
+
+// ── Cover Letter ───────────────────────────────────────────────────────────────
+function setupCoverLetterButton() {
+  const clBtn = document.getElementById('cover-letter-btn');
+  const resultsDiv = document.getElementById('cover-letter-results');
+  const contentDiv = document.getElementById('cover-letter-content');
+  const copyBtn = document.getElementById('copy-cl-btn');
+  const downloadBtn = document.getElementById('download-cl-btn');
+
+  clBtn.addEventListener('click', async () => {
+    const resumeId = document.getElementById('resume_version_id').value;
+    if (!resumeId) {
+      alert("Please select a resume to generate a cover letter.");
+      return;
+    }
+    
+    if (!window.extractedJobDescription) {
+      alert("No job description found on this page.");
+      return;
+    }
+
+    clBtn.disabled = true;
+    clBtn.innerText = 'Generating...';
+    downloadBtn.classList.add('hidden');
+    resultsDiv.classList.remove('hidden');
+    contentDiv.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:#6366f1;"><div class="loader" style="width:16px;height:16px;border-width:2px;border-top-color:#6366f1;"></div> Generating cover letter...</div>';
+
+    try {
+      const response = await fetch(`${API_URL}/applications/cover-letter`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          job_description: window.extractedJobDescription,
+          resume_id: parseInt(resumeId),
+          company_name: document.getElementById('company_name').value || '',
+          job_title: document.getElementById('job_title').value || ''
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to generate');
+
+      contentDiv.innerText = data.cover_letter;
+      downloadBtn.classList.remove('hidden');
+      document.getElementById('cl-chat').classList.remove('hidden');
+    } catch (err) {
+      contentDiv.innerHTML = `<span style="color:#ef4444;">Error: ${err.message}</span>`;
+    } finally {
+      clBtn.disabled = false;
+      clBtn.innerText = 'Cover Letter';
+    }
+  });
+
+  downloadBtn.addEventListener('click', async () => {
+    const coverLetter = contentDiv.innerText.trim();
+    if (!coverLetter || coverLetter === 'Generating cover letter...') return;
+
+    downloadBtn.disabled = true;
+    downloadBtn.innerText = 'Preparing...';
+
+    try {
+      const response = await fetch(`${API_URL}/applications/cover-letter/docx`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          cover_letter: coverLetter,
+          company_name: document.getElementById('company_name').value || '',
+          job_title: document.getElementById('job_title').value || ''
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to create Word file');
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get('Content-Disposition') || '';
+      const filenameMatch = disposition.match(/filename="?([^"]+)"?/i);
+      const filename = filenameMatch?.[1] || buildCoverLetterFilename();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      downloadBtn.disabled = false;
+      downloadBtn.innerText = 'Download Word';
+    }
+  });
+
+  copyBtn.addEventListener('click', () => {
+    const text = contentDiv.innerText;
+    if (text && text !== 'Generating cover letter...') {
+      navigator.clipboard.writeText(text);
+      copyBtn.innerText = 'Copied!';
+      setTimeout(() => copyBtn.innerText = 'Copy', 2000);
+    }
+  });
+
+  // ── Refine chat ──────────────────────────────────────────────────────────
+  const chatInput  = document.getElementById('cl-chat-input');
+  const chatSend   = document.getElementById('cl-chat-send');
+  const chatHistory = document.getElementById('cl-chat-history');
+
+  async function sendRefinement() {
+    const instruction = chatInput.value.trim();
+    if (!instruction) return;
+
+    const currentLetter = contentDiv.innerText;
+    if (!currentLetter) return;
+
+    chatInput.value = '';
+    chatSend.disabled = true;
+
+    // Add user bubble
+    const userMsg = document.createElement('div');
+    userMsg.className = 'cl-chat-msg user';
+    userMsg.textContent = instruction;
+    chatHistory.appendChild(userMsg);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+
+    try {
+      const response = await fetch(`${API_URL}/applications/refine-cover-letter`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          cover_letter: currentLetter,
+          instruction,
+          job_description: window.extractedJobDescription || '',
+          company_name: document.getElementById('company_name').value || '',
+          job_title: document.getElementById('job_title').value || ''
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Refinement failed');
+
+      contentDiv.innerText = data.cover_letter;
+      downloadBtn.classList.remove('hidden');
+
+      const assistantMsg = document.createElement('div');
+      assistantMsg.className = 'cl-chat-msg assistant';
+      assistantMsg.textContent = '✓ Letter updated';
+      chatHistory.appendChild(assistantMsg);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    } catch (err) {
+      const errMsg = document.createElement('div');
+      errMsg.className = 'cl-chat-msg assistant';
+      errMsg.style.background = '#fef2f2';
+      errMsg.style.color = '#991b1b';
+      errMsg.textContent = `Error: ${err.message}`;
+      chatHistory.appendChild(errMsg);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    } finally {
+      chatSend.disabled = false;
+      chatInput.focus();
+    }
+  }
+
+  chatSend.addEventListener('click', sendRefinement);
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendRefinement();
+  });
+}
+
+function buildCoverLetterFilename() {
+  const company = document.getElementById('company_name').value || 'company';
+  const role = document.getElementById('job_title').value || 'role';
+  const base = `${company}_${role}_cover_letter`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 80);
+  return `${base || 'cover_letter'}.docx`;
 }
 
 // Set an input value and show the "auto" badge when a value is present

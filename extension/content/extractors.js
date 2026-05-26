@@ -53,12 +53,82 @@ function first(...selectors) {
   return '';
 }
 
+function cleanJobDescription(text) {
+  if (!text) return '';
+
+  let cleaned = text
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  const stopMarkers = [
+    '\nApply for this job',
+    '\nCreate a Job Alert',
+    '\nInterested in building your career',
+    '\nFirst Name',
+    '\nResume/CV',
+    '\nCover Letter',
+    '\nPowered by'
+  ];
+
+  const lower = cleaned.toLowerCase();
+  const stopIndex = stopMarkers
+    .map(marker => lower.indexOf(marker.toLowerCase()))
+    .filter(index => index > 0)
+    .sort((a, b) => a - b)[0];
+
+  if (stopIndex) {
+    cleaned = cleaned.slice(0, stopIndex).trim();
+  }
+
+  return cleaned;
+}
+
+function firstCleanDescription(...selectors) {
+  return cleanJobDescription(first(...selectors));
+}
+
 // Convert a URL slug / subdomain to readable title case ("my-company" → "My Company")
 function toTitleCase(str) {
   return str.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 // ─── Portal extractors ────────────────────────────────────────────────────────
+
+function extractGreenhouseDescription() {
+  const direct = firstCleanDescription(
+    '#content',
+    '.job-description',
+    '#job-description',
+    '[data-qa="job-description"]',
+    '[data-testid="job-description"]',
+    '[class*="jobDescription"]',
+    '[class*="job-description"]',
+    '[class*="JobDescription"]',
+    'section[aria-label*="description" i]',
+    'main article'
+  );
+
+  if (direct) return direct;
+
+  const bodyText = cleanJobDescription(document.body?.innerText || '');
+  if (!bodyText) return '';
+
+  const title = first('[data-qa="job-title"]', '.app-title', 'h1.app-title', 'h1');
+  const titleIndex = title ? bodyText.indexOf(title) : -1;
+  if (titleIndex >= 0) {
+    const afterTitle = bodyText.slice(titleIndex + title.length).trim();
+    return cleanJobDescription(afterTitle);
+  }
+
+  return bodyText;
+}
 
 function extractGreenhouseData() {
   const ld = extractJsonLd();
@@ -78,7 +148,7 @@ function extractGreenhouseData() {
       document.querySelector('meta[property="og:site_name"]')?.content ||
       companyFallback,
     location: ld?.location || first('[data-qa="location"]', '.location', '.offices', '.location-city'),
-    job_description: ld?.job_description || first('#content', '.job-description', '#job-description'),
+    job_description: cleanJobDescription(ld?.job_description) || extractGreenhouseDescription(),
     job_url: window.location.href,
     portal: 'Greenhouse'
   };

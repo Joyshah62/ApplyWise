@@ -336,3 +336,87 @@ p {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Cover Letter Chat ───────────────────────────────────────────────────── */
+.cl-chat {
+  border-top: 1px solid #e2e8f0;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.cl-chat-history {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 110px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.cl-chat-msg {
+  font-size: 11.5px;
+  padding: 5px 9px;
+  border-radius: 10px;
+  max-width: 90%;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.cl-chat-msg.user {
+  background: #ede9fe;
+  color: #4c1d95;
+  align-self: flex-end;
+  border-bottom-right-radius: 3px;
+}
+
+.cl-chat-msg.assistant {
+  background: #f0fdf4;
+  color: #14532d;
+  align-self: flex-start;
+  border-bottom-left-radius: 3px;
+}
+
+.cl-chat-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.cl-chat-input-row input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 7px;
+  font-size: 12px;
+  font-family: inherit;
+  background: #f8fafc;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.cl-chat-input-row input:focus {
+  border-color: #6366f1;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+
+.cl-chat-input-row input::placeholder { color: #94a3b8; }
+
+.cl-chat-send {
+  padding: 7px 12px;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.cl-chat-send:hover { background: #4338ca; }
+.cl-chat-send:disabled { background: #a5b4fc; cursor: not-allowed; }

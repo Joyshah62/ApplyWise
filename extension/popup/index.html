@@ -125,13 +125,18 @@
       <!-- Resume Used -->
       <div class="form-group">
         <label>Resume Used</label>
-        <div class="resume-select-wrapper" style="display: flex; gap: 8px;">
-          <select id="resume_version_id" style="flex: 1;">
+        <div class="resume-select-wrapper" style="display: flex; flex-direction: column; gap: 8px;">
+          <select id="resume_version_id" style="width: 100%;">
             <option value="">— Select resume —</option>
           </select>
-          <button type="button" id="analyze-btn" class="btn btn-secondary" style="padding: 0 12px; font-size: 12px; white-space: nowrap; height: 38px;">
-            Analyze Fit
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" id="analyze-btn" class="btn btn-secondary" style="flex: 1; font-size: 12px; height: 36px; padding: 0;">
+              Analyze Fit
+            </button>
+            <button type="button" id="cover-letter-btn" class="btn btn-secondary" style="flex: 1; font-size: 12px; height: 36px; padding: 0;">
+              Cover Letter
+            </button>
+          </div>
         </div>
       </div>
 
@@ -139,6 +144,27 @@
       <div id="analysis-results" class="analysis-results hidden" style="margin-bottom: 16px; background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 8px; padding: 12px; font-size: 12px;">
         <h4 style="margin: 0 0 8px 0; color: #3730A3; font-size: 13px;">Resume Analysis</h4>
         <div id="analysis-content"></div>
+      </div>
+
+      <!-- Cover Letter Results -->
+      <div id="cover-letter-results" class="hidden" style="margin-bottom: 16px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; font-size: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h4 style="margin: 0; color: #0F172A; font-size: 13px;">Cover Letter</h4>
+          <div style="display: flex; gap: 6px;">
+            <button type="button" id="download-cl-btn" class="btn btn-secondary hidden" style="padding: 4px 8px; font-size: 11px; height: auto;">Download Word</button>
+            <button type="button" id="copy-cl-btn" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; height: auto;">Copy</button>
+          </div>
+        </div>
+        <div id="cover-letter-content" style="white-space: pre-wrap; color: #475569; max-height: 200px; overflow-y: auto; font-family: inherit; line-height: 1.5;"></div>
+
+        <!-- Refine Chat -->
+        <div id="cl-chat" class="cl-chat hidden">
+          <div id="cl-chat-history" class="cl-chat-history"></div>
+          <div class="cl-chat-input-row">
+            <input type="text" id="cl-chat-input" placeholder="e.g. Make it shorter, add more about ML…" />
+            <button type="button" id="cl-chat-send" class="cl-chat-send">Send</button>
+          </div>
+        </div>
       </div>
 
       <!-- Job URL display bar -->

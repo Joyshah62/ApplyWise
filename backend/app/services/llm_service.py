@@ -120,3 +120,42 @@ def generate_cover_letter(job_description, company_name, job_title, resume_text)
         temperature=0.5,
     )
     return response.choices[0].message.content.strip()
+
+
+def refine_cover_letter(current_letter, instruction, job_description, company_name, job_title):
+    prompt = f"""
+    You are a professional cover letter editor.
+    The candidate wants to refine their cover letter based on a specific instruction.
+
+    COMPANY: {company_name}
+    ROLE: {job_title}
+
+    JOB DESCRIPTION:
+    {job_description}
+
+    CURRENT COVER LETTER:
+    {current_letter}
+
+    CANDIDATE'S INSTRUCTION:
+    {instruction}
+
+    Rewrite the cover letter applying the instruction precisely.
+    Keep these constraints:
+    - 250-350 words maximum (must fit one page)
+    - Exactly 3 paragraphs
+    - Professional but human tone, no filler phrases
+    - No date, address block, or subject line — body paragraphs only
+    - Do NOT start with "I am writing to apply for..."
+
+    Output only the revised cover letter text. No explanations, no markdown.
+    """
+
+    response = _client().chat.completions.create(
+        messages=[
+            {"role": "system", "content": "You are a professional cover letter editor. Output only the revised cover letter body text."},
+            {"role": "user", "content": prompt},
+        ],
+        model="llama-3.3-70b-versatile",
+        temperature=0.4,
+    )
+    return response.choices[0].message.content.strip()

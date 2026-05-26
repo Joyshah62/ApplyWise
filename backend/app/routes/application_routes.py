@@ -1,6 +1,9 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
+from io import BytesIO
+from zipfile import ZIP_DEFLATED, ZipFile
+from xml.sax.saxutils import escape
 from app.extensions import db
 from app.models.application import Application
 from app.models.status_history import StatusHistory
@@ -181,4 +184,96 @@ def generate_cover_letter():
         return jsonify({'cover_letter': cover_letter}), 200
     except Exception as e:
         print(f"Error generating cover letter: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def _docx_paragraph(text):
+    escaped_text = escape(text)
+    return (
+        '<w:p>'
+        '<w:pPr><w:spacing w:after="240"/></w:pPr>'
+        f'<w:r><w:t xml:space="preserve">{escaped_text}</w:t></w:r>'
+        '</w:p>'
+    )
+
+
+def _build_cover_letter_docx(cover_letter):
+    paragraphs = [
+        paragraph.strip()
+        for paragraph in cover_letter.replace('\r\n', '\n').split('\n\n')
+        if paragraph.strip()
+    ]
+    body = ''.join(_docx_paragraph(paragraph) for paragraph in paragraphs)
+    document_xml = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    {body}
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>
+    </w:sectPr>
+  </w:body>
+</w:document>'''
+
+    buffer = BytesIO()
+    with ZipFile(buffer, 'w', ZIP_DEFLATED) as docx:
+        docx.writestr('[Content_Types].xml', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>''')
+        docx.writestr('_rels/.rels', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>''')
+        docx.writestr('word/document.xml', document_xml)
+
+    buffer.seek(0)
+    return buffer
+
+
+@applications_bp.route('/cover-letter/docx', methods=['POST'])
+@jwt_required()
+def download_cover_letter_docx():
+    data = request.get_json()
+    cover_letter = data.get('cover_letter', '').strip()
+    company_name = data.get('company_name', '').strip() or 'company'
+    job_title = data.get('job_title', '').strip() or 'role'
+
+    if not cover_letter:
+        return jsonify({'error': 'cover_letter is required'}), 400
+
+    filename_base = f"{company_name}_{job_title}_cover_letter".lower()
+    filename = ''.join(char if char.isalnum() else '_' for char in filename_base)
+    filename = '_'.join(part for part in filename.split('_') if part)[:80] + '.docx'
+
+    return send_file(
+        _build_cover_letter_docx(cover_letter),
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        as_attachment=True,
+        download_name=filename
+    )
+
+
+@applications_bp.route('/refine-cover-letter', methods=['POST'])
+@jwt_required()
+def refine_cover_letter():
+    from app.services.llm_service import refine_cover_letter as refine
+
+    data = request.get_json()
+    current_letter = data.get('cover_letter', '')
+    instruction = data.get('instruction', '')
+    job_description = data.get('job_description', '')
+    company_name = data.get('company_name', '')
+    job_title = data.get('job_title', '')
+
+    if not current_letter or not instruction:
+        return jsonify({'error': 'cover_letter and instruction are required'}), 400
+
+    try:
+        refined = refine(current_letter, instruction, job_description, company_name, job_title)
+        return jsonify({'cover_letter': refined}), 200
+    except Exception as e:
+        print(f"Error refining cover letter: {e}")
         return jsonify({'error': str(e)}), 500

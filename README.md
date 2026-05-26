@@ -75,6 +75,28 @@ ApplyWise is a full-stack, AI-powered job application tracker designed to help j
 4. Select the `extension` folder located inside the `ApplyWise` repository directory.
 5. Pin the ApplyWise icon to your browser toolbar. Click the icon, log in to your account, and start using it on any job posting!
 
+### 4. Docker Setup (Recommended / Simplified)
+
+Instead of setting up Python virtual environments and Node modules manually on your host machine, you can run the entire full-stack application with a single command using Docker Compose.
+
+1. Make sure **Docker Desktop** is running.
+2. Configure your environment variables in `backend/.env` (ensure `GROQ_API_KEY` is set).
+3. Build and launch all services in detached mode:
+   ```bash
+   docker compose up --build -d
+   ```
+4. Access the applications:
+   - **React Frontend Dashboard**: [http://localhost:5173](http://localhost:5173)
+   - **Flask Backend API**: [http://localhost:5000](http://localhost:5000)
+5. To view real-time logs, run:
+   ```bash
+   docker compose logs -f
+   ```
+6. To shut down the services, run:
+   ```bash
+   docker compose down
+   ```
+
 ## 📄 Resume Highlights
 - **Chrome Extension Integration**: Built a Manifest V3 extension that captures job application metadata in one click, extracting company name, job title, portal URL, and job description with user confirmation.
 - **AI/LLM Pipeline Integration**: Integrated Groq API and LLaMA-3 models to build an intelligent RAG pipeline that evaluates job descriptions against candidate resumes, generating dynamic fit-scores and ATS-optimized rewrite suggestions.
