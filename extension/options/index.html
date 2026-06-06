@@ -7,21 +7,36 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="container" style="text-align: center; padding: 60px 20px;">
-    <div class="logo" style="justify-content: center; margin-bottom: 24px;">
+  <div class="container">
+    <div class="logo">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
         <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
       </svg>
       <span>ApplyWise Settings</span>
     </div>
-    <h2 style="font-size: 1.5rem; margin-bottom: 12px;">Quick Links have moved!</h2>
-    <p class="description" style="margin-bottom: 32px;">
-      To keep everything in one place, you can now manage your Quick Links directly from the ApplyWise dashboard.
-    </p>
-    <a href="http://localhost:5173/settings" target="_blank" class="btn btn-primary" style="text-decoration: none;">
-      Go to Dashboard Settings
-    </a>
+
+    <section class="settings-section">
+      <h2>Backend URL</h2>
+      <p class="description">Set this to your deployed backend URL. Leave blank to use localhost (development).</p>
+      <div class="field-row">
+        <input
+          type="url"
+          id="api-url-input"
+          placeholder="https://your-backend.onrender.com/api"
+          class="text-input"
+        />
+        <button id="save-api-btn" class="btn btn-primary">Save</button>
+      </div>
+      <p id="api-save-status" class="save-status"></p>
+    </section>
+
+    <section class="settings-section">
+      <h2>Dashboard</h2>
+      <p class="description">Manage quick links and other settings from the ApplyWise dashboard.</p>
+      <a id="dashboard-link" href="#" target="_blank" class="btn btn-secondary">Open Dashboard</a>
+    </section>
   </div>
+  <script src="options.js"></script>
 </body>
 </html>

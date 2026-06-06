@@ -2,7 +2,6 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -13,12 +12,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Set environment variables for Flask
-ENV FLASK_APP=run.py
-ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_RUN_PORT=5000
-ENV FLASK_ENV=development
+# Store SQLite db outside the image layer so it persists via volume
+ENV DATABASE_URL=sqlite:////app/data/applywise.db
+ENV FLASK_APP=wsgi.py
+ENV FLASK_ENV=production
 
 EXPOSE 5000
 
-CMD ["flask", "run"]
+CMD ["sh", "-c", "flask db upgrade && gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app"]

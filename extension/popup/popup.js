@@ -1,10 +1,18 @@
-const API_URL = 'http://localhost:5000/api';
+let apiUrl = 'http://localhost:5000/api';
 let authToken = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const loginView   = document.getElementById('login-view');
   const formView    = document.getElementById('form-view');
   const loadingView = document.getElementById('loading-view');
+
+  // Load API URL from options before doing anything
+  await new Promise(resolve => {
+    chrome.storage.local.get(['apiUrl'], r => {
+      if (r.apiUrl) apiUrl = r.apiUrl;
+      resolve();
+    });
+  });
 
   chrome.storage.local.get(['token'], (result) => {
     if (result.token) {
@@ -28,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.innerText = 'Signing in…';
 
     try {
-      const res  = await fetch(`${API_URL}/auth/login`, {
+      const res  = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -78,7 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     try {
-      const response = await fetch(`${API_URL}/applications`, {
+      const response = await fetch(`${apiUrl}/applications`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,7 +133,7 @@ function handleLogout() {
 // ── Resumes ────────────────────────────────────────────────────────────────────
 async function fetchResumes() {
   try {
-    const res = await fetch(`${API_URL}/resumes`, {
+    const res = await fetch(`${apiUrl}/resumes`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
     });
     if (!res.ok) return;
@@ -214,7 +222,7 @@ function setupAnalyzeButton() {
     contentDiv.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:#6366f1;"><div class="loader" style="width:16px;height:16px;border-width:2px;border-top-color:#6366f1;"></div> Analyzing fit...</div>';
 
     try {
-      const response = await fetch(`${API_URL}/applications/analyze`, {
+      const response = await fetch(`${apiUrl}/applications/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -287,7 +295,7 @@ function setupCoverLetterButton() {
     contentDiv.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:#6366f1;"><div class="loader" style="width:16px;height:16px;border-width:2px;border-top-color:#6366f1;"></div> Generating cover letter...</div>';
 
     try {
-      const response = await fetch(`${API_URL}/applications/cover-letter`, {
+      const response = await fetch(`${apiUrl}/applications/cover-letter`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -323,7 +331,7 @@ function setupCoverLetterButton() {
     downloadBtn.innerText = 'Preparing...';
 
     try {
-      const response = await fetch(`${API_URL}/applications/cover-letter/docx`, {
+      const response = await fetch(`${apiUrl}/applications/cover-letter/docx`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -393,7 +401,7 @@ function setupCoverLetterButton() {
     chatHistory.scrollTop = chatHistory.scrollHeight;
 
     try {
-      const response = await fetch(`${API_URL}/applications/refine-cover-letter`, {
+      const response = await fetch(`${apiUrl}/applications/refine-cover-letter`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

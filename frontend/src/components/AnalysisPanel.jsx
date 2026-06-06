@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Sparkles, CheckCircle2, XCircle, Lightbulb } from 'lucide-react';
 import api from '../services/api';
 
-export default function AnalysisPanel({ app, onClose }) {
+export default function AnalysisPanel({ app, onClose, onSuccess }) {
   const [resumes, setResumes] = useState([]);
   const [selectedResumeId, setSelectedResumeId] = useState('');
   const [jobDescription, setJobDescription] = useState('');
@@ -43,6 +43,7 @@ export default function AnalysisPanel({ app, onClose }) {
         resume_id: parseInt(selectedResumeId),
       });
       setResult(res.data);
+      onSuccess?.();
     } catch (err) {
       setError(err.response?.data?.error || 'Analysis failed. Please try again.');
     } finally {

@@ -15,10 +15,21 @@ export default function Applications() {
   const [coverLetterApp, setCoverLetterApp] = useState(null);
   const [expandedNoteId, setExpandedNoteId] = useState(null);
   const [noteText, setNoteText] = useState('');
+  const [aiUsage, setAiUsage] = useState(null);
 
   useEffect(() => {
     fetchApplications();
+    fetchAiUsage();
   }, []);
+
+  const fetchAiUsage = async () => {
+    try {
+      const res = await api.get('/applications/ai-usage');
+      setAiUsage(res.data);
+    } catch {}
+  };
+
+  const refreshAiUsage = () => fetchAiUsage();
 
   const fetchApplications = async () => {
     try {
@@ -121,6 +132,32 @@ export default function Applications() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Job Applications</h1>
         <div className="flex items-center gap-2">
+          {aiUsage && (
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5">
+              <span className="text-xs text-slate-500 whitespace-nowrap">AI today</span>
+              <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    aiUsage.remaining === 0
+                      ? 'bg-red-500'
+                      : aiUsage.remaining <= 5
+                      ? 'bg-amber-400'
+                      : 'bg-indigo-500'
+                  }`}
+                  style={{ width: `${Math.min(100, (aiUsage.used / aiUsage.limit) * 100)}%` }}
+                />
+              </div>
+              <span className={`text-xs font-medium tabular-nums ${
+                aiUsage.remaining === 0
+                  ? 'text-red-600'
+                  : aiUsage.remaining <= 5
+                  ? 'text-amber-600'
+                  : 'text-slate-600'
+              }`}>
+                {aiUsage.used}/{aiUsage.limit}
+              </span>
+            </div>
+          )}
           <button onClick={exportCSV} className="flex items-center gap-2 border border-slate-300 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
             <Download className="w-4 h-4" />
             Export CSV
@@ -253,11 +290,11 @@ export default function Applications() {
       />
 
       {analysisApp && (
-        <AnalysisPanel app={analysisApp} onClose={() => setAnalysisApp(null)} />
+        <AnalysisPanel app={analysisApp} onClose={() => setAnalysisApp(null)} onSuccess={refreshAiUsage} />
       )}
 
       {coverLetterApp && (
-        <CoverLetterPanel app={coverLetterApp} onClose={() => setCoverLetterApp(null)} />
+        <CoverLetterPanel app={coverLetterApp} onClose={() => setCoverLetterApp(null)} onSuccess={refreshAiUsage} />
       )}
     </div>
   );

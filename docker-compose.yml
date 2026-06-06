@@ -2,30 +2,26 @@ version: '3.8'
 
 services:
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
     environment:
-      - FLASK_ENV=development
-      - DATABASE_URL=sqlite:////app/applywise.db
-      - SECRET_KEY=super-secret
-      - JWT_SECRET_KEY=jwt-secret
+      - FLASK_ENV=production
     env_file:
       - ./backend/.env
     volumes:
-      - ./backend:/app
-      
+      - db_data:/app/data
+
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:5000/api}
     ports:
-      - "5173:5173"
-    environment:
-      - NODE_ENV=development
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: npm run dev -- --host
+      - "5173:80"
+
+volumes:
+  db_data:

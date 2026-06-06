@@ -1,5 +1,11 @@
 // Background service worker
-const API_URL = 'http://localhost:5000/api';
+const DEFAULT_API_URL = 'http://localhost:5000/api';
+
+function getApiUrl() {
+  return new Promise(resolve => {
+    chrome.storage.local.get(['apiUrl'], r => resolve(r.apiUrl || DEFAULT_API_URL));
+  });
+}
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log('ApplyWise Extension installed.');
@@ -21,14 +27,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     // Fetch from API
-    chrome.storage.local.get(['token'], (result) => {
+    chrome.storage.local.get(['token'], async (result) => {
       const token = result.token;
       if (!token) {
         sendResponse({ success: false, error: 'Not logged in' });
         return;
       }
 
-      fetch(`${API_URL}/quick-links`, {
+      const apiUrl = await getApiUrl();
+      fetch(`${apiUrl}/quick-links`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => {
@@ -42,7 +49,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       })
       .catch(err => {
         console.error('ApplyWise: Failed to fetch quick links', err);
-        // Fallback to cache if request fails
         if (quickLinksCache) {
           sendResponse({ success: true, links: quickLinksCache });
         } else {

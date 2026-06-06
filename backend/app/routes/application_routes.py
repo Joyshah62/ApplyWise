@@ -1,12 +1,28 @@
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
+from datetime import datetime, date
 from io import BytesIO
 from zipfile import ZIP_DEFLATED, ZipFile
 from xml.sax.saxutils import escape
 from app.extensions import db
 from app.models.application import Application
 from app.models.status_history import StatusHistory
+
+
+def _ai_calls_today(user_id):
+    from app.models.ai_event import AiEvent
+    today = date.today()
+    return AiEvent.query.filter(
+        AiEvent.user_id == user_id,
+        db.func.date(AiEvent.created_at) == today
+    ).count()
+
+
+def _check_ai_limit(user_id):
+    """Returns (allowed, used, limit). Call before any AI endpoint."""
+    limit = current_app.config['DAILY_AI_LIMIT']
+    used = _ai_calls_today(user_id)
+    return used < limit, used, limit
 
 applications_bp = Blueprint('applications', __name__, url_prefix='/api/applications')
 
@@ -125,18 +141,31 @@ def delete_application(app_id):
     db.session.commit()
     return jsonify({'message': 'Deleted successfully'}), 200
 
+@applications_bp.route('/ai-usage', methods=['GET'])
+@jwt_required()
+def get_ai_usage():
+    user_id = get_jwt_identity()
+    limit = current_app.config['DAILY_AI_LIMIT']
+    used = _ai_calls_today(user_id)
+    return jsonify({'used': used, 'limit': limit, 'remaining': max(0, limit - used)}), 200
+
+
 @applications_bp.route('/analyze', methods=['POST'])
 @jwt_required()
 def analyze_application():
     from app.models.resume import ResumeVersion
     from app.services.llm_service import analyze_resume_fit
-    
+
     user_id = get_jwt_identity()
+    allowed, used, limit = _check_ai_limit(user_id)
+    if not allowed:
+        return jsonify({'error': f'Daily AI limit reached ({limit} calls/day). Resets at midnight.', 'used': used, 'limit': limit}), 429
+
     data = request.get_json()
-    
+
     job_description = data.get('job_description')
     resume_id = data.get('resume_id')
-    
+
     if not job_description or not resume_id:
         return jsonify({'error': 'job_description and resume_id are required'}), 400
         
@@ -149,6 +178,9 @@ def analyze_application():
         
     try:
         analysis_result = analyze_resume_fit(job_description, resume.content)
+        from app.models.ai_event import AiEvent
+        db.session.add(AiEvent(user_id=user_id, event_type='analyze'))
+        db.session.commit()
         return jsonify(analysis_result), 200
     except Exception as e:
         print(f"Error during LLM analysis: {e}")
@@ -162,6 +194,10 @@ def generate_cover_letter():
     from app.services.llm_service import generate_cover_letter as gen_cover_letter
 
     user_id = get_jwt_identity()
+    allowed, used, limit = _check_ai_limit(user_id)
+    if not allowed:
+        return jsonify({'error': f'Daily AI limit reached ({limit} calls/day). Resets at midnight.', 'used': used, 'limit': limit}), 429
+
     data = request.get_json()
 
     job_description = data.get('job_description')
@@ -181,6 +217,9 @@ def generate_cover_letter():
 
     try:
         cover_letter = gen_cover_letter(job_description, company_name, job_title, resume.content)
+        from app.models.ai_event import AiEvent
+        db.session.add(AiEvent(user_id=user_id, event_type='cover_letter'))
+        db.session.commit()
         return jsonify({'cover_letter': cover_letter}), 200
     except Exception as e:
         print(f"Error generating cover letter: {e}")
@@ -261,6 +300,11 @@ def download_cover_letter_docx():
 def refine_cover_letter():
     from app.services.llm_service import refine_cover_letter as refine
 
+    user_id = get_jwt_identity()
+    allowed, used, limit = _check_ai_limit(user_id)
+    if not allowed:
+        return jsonify({'error': f'Daily AI limit reached ({limit} calls/day). Resets at midnight.', 'used': used, 'limit': limit}), 429
+
     data = request.get_json()
     current_letter = data.get('cover_letter', '')
     instruction = data.get('instruction', '')
@@ -273,6 +317,9 @@ def refine_cover_letter():
 
     try:
         refined = refine(current_letter, instruction, job_description, company_name, job_title)
+        from app.models.ai_event import AiEvent
+        db.session.add(AiEvent(user_id=user_id, event_type='refine'))
+        db.session.commit()
         return jsonify({'cover_letter': refined}), 200
     except Exception as e:
         print(f"Error refining cover letter: {e}")

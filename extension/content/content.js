@@ -252,7 +252,17 @@ function initSidebar() {
   const panel = document.createElement('div');
   panel.className = 'panel';
   
-  const dashboardSettingsUrl = 'http://localhost:5173/settings';
+  // Derive dashboard URL from the stored API URL (same logic as options.js)
+  let dashboardSettingsUrl = 'http://localhost:5173/settings';
+  chrome.storage.local.get(['apiUrl'], (result) => {
+    if (result.apiUrl) {
+      const base = result.apiUrl.replace(/\/api\/?$/, '');
+      dashboardSettingsUrl = base + '/settings';
+      // Update all rendered settings links after storage is read
+      panel.querySelectorAll('.settings-link').forEach(a => { a.href = dashboardSettingsUrl; });
+      panel.querySelectorAll('a[data-settings-link]').forEach(a => { a.href = dashboardSettingsUrl; });
+    }
+  });
 
   panel.innerHTML = `
     <div class="panel-header">
@@ -319,16 +329,15 @@ function initSidebar() {
 
   function loadLinks() {
     const linksList = panel.querySelector('#links-list');
-    const dashboardSettingsUrl = 'http://localhost:5173/settings'; // Link to React dashboard
-    
+
     chrome.runtime.sendMessage({ action: 'get_quick_links' }, (response) => {
       const links = response?.success ? (response.links || []) : [];
-      
+
       if (links.length === 0) {
         linksList.innerHTML = `
           <div class="empty-state">
             No quick links found.<br>
-            <a href="${dashboardSettingsUrl}" target="_blank">Add links in Dashboard</a>
+            <a href="${dashboardSettingsUrl}" target="_blank" data-settings-link>Add links in Dashboard</a>
           </div>
         `;
         return;

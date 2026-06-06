@@ -1,7 +1,8 @@
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 import bcrypt
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models.user import User
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
@@ -33,6 +34,7 @@ def register():
     }), 201
 
 @auth_bp.route('/login', methods=['POST'])
+@limiter.limit("10 per minute")
 def login():
     data = request.get_json()
     email = data.get('email')
@@ -44,6 +46,9 @@ def login():
     user = User.query.filter_by(email=email).first()
     if not user or not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
         return jsonify({'error': 'Invalid credentials'}), 401
+
+    user.last_active_at = datetime.utcnow()
+    db.session.commit()
 
     access_token = create_access_token(identity=str(user.id))
     return jsonify({

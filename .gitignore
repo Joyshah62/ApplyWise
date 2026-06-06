@@ -66,3 +66,22 @@ instance/
 # Test Tokens
 test_token.txt
 test_token2.txt
+
+# Logs
+*.log
+logs/
+
+# Coverage
+.coverage
+htmlcov/
+coverage.xml
+
+# Pytest
+.pytest_cache/
+
+# Uploads (user-uploaded files should not be committed)
+backend/app/uploads/
+uploads/
+
+# Render / deployment artifacts
+.render/

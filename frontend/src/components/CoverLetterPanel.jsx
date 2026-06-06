@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, FileText, Copy, Check, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 
-export default function CoverLetterPanel({ app, onClose }) {
+export default function CoverLetterPanel({ app, onClose, onSuccess }) {
   const [resumes, setResumes] = useState([]);
   const [selectedResumeId, setSelectedResumeId] = useState('');
   const [jobDescription, setJobDescription] = useState('');
@@ -46,6 +46,7 @@ export default function CoverLetterPanel({ app, onClose }) {
         job_title: app.job_title,
       });
       setCoverLetter(res.data.cover_letter);
+      onSuccess?.();
     } catch (err) {
       setError(err.response?.data?.error || 'Generation failed. Please try again.');
     } finally {
