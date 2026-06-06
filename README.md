@@ -1,107 +1,113 @@
 # ApplyWise — AI-Powered Job Application Tracker
 
-ApplyWise is a full-stack, AI-powered job application tracker that helps job seekers automatically log applications via a Chrome Extension and manage them in a centralized React dashboard. Powered by Groq / LLaMA-3, it provides resume fit scoring, ATS-optimized rewrite suggestions, and tailored cover letter generation.
+Stop losing track of where you applied. ApplyWise lets you save job postings in one click from any career page, then uses AI to tailor your resume and generate cover letters — all in one dashboard.
 
-## Features
+**Live app:** [apply-wise-gamma.vercel.app](https://apply-wise-gamma.vercel.app)
 
-- **Chrome Extension (Manifest V3):** One-click metadata and job description extraction from Greenhouse, Lever, LinkedIn, and generic career pages.
-- **AI Resume Tailoring:** RAG pipeline that compares your resume against a job description, providing a fit score and line-by-line rewrite suggestions to bypass ATS filters.
-- **Dynamic Cover Letter Generation:** Generates a personalized cover letter based on your resume and the job description.
-- **Resume Version Management:** Upload and parse PDF resumes to track which version was used for each application.
-- **Frontend Dashboard (React + Tailwind CSS):** Bento-grid dashboard, Kanban/Table application tracker, and AI analysis modals.
-- **Backend API (Flask):** RESTful endpoints with JWT authentication, PDF parsing, rate limiting, and Postgres/SQLite support.
+---
+
+## What it does
+
+- **Save jobs in one click** — click the extension on any job posting (LinkedIn, Greenhouse, Lever, Workday, or any company site) to instantly capture the company, role, URL, and full job description
+- **AI resume tailoring** — paste your resume and get a fit score + line-by-line rewrite suggestions optimized for ATS
+- **AI cover letter generation** — get a personalized cover letter written from your resume and the job description in seconds
+- **Track every application** — see all your applications in a dashboard with status columns (Applied → Interviewing → Offer / Rejected)
+- **Resume version management** — upload multiple PDF resumes and track which version you sent for each role
+
+---
+
+## Getting started
+
+### 1. Create an account
+Go to [apply-wise-gamma.vercel.app](https://apply-wise-gamma.vercel.app) and sign up for free.
+
+### 2. Install the Chrome Extension
+
+1. Download the latest extension from the [Releases page](https://github.com/Joyshah62/ApplyWise/releases)
+2. Unzip the downloaded file
+3. Open Chrome and go to `chrome://extensions/`
+4. Turn on **Developer mode** (toggle in the top right)
+5. Click **Load unpacked** and select the unzipped `extension` folder
+6. Pin the ApplyWise icon to your Chrome toolbar
+
+### 3. Start tracking
+
+1. Click the ApplyWise icon in your toolbar and log in with your account
+2. Browse to any job posting and click the icon to save it
+3. Head to the dashboard to view, manage, and analyze your applications
+
+---
+
+## Using the AI features
+
+### Resume Tailoring
+1. Go to an application in your dashboard
+2. Click **Analyze Resume**
+3. Paste your resume text (or select an uploaded resume version)
+4. Get an instant fit score and suggested rewrites for each bullet point
+
+### Cover Letter Generation
+1. Open any saved application
+2. Click **Generate Cover Letter**
+3. Your personalized cover letter is generated based on your resume and the job description
+4. Copy, edit, and send
+
+---
 
 ## Tech Stack
 
 | Layer | Technologies |
 |---|---|
 | **Frontend** | React, Vite, Tailwind CSS, React Router, Lucide Icons |
-| **Backend** | Python, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Flask-Limiter, Gunicorn |
+| **Backend** | Python, Flask, SQLAlchemy, Flask-JWT-Extended, Flask-Limiter, Gunicorn |
 | **AI** | Groq API (LLaMA-3.3-70b-versatile) |
-| **Database** | PostgreSQL (Supabase) · SQLite for local dev |
+| **Database** | PostgreSQL (Supabase) |
 | **Extension** | Vanilla JavaScript, Chrome Extension Manifest V3 |
 | **Deployment** | Render (backend) · Vercel (frontend) |
 
-## Local Development
+---
+
+## Self-hosting / Local Development
+
+Want to run your own instance? See the instructions below.
 
 ### Prerequisites
-
 - Python 3.10+
 - Node.js 20+
 - A [Groq API key](https://console.groq.com)
 
-### 1. Backend
-
+### Backend
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env            # fill in your values
+cp .env.example .env            # fill in SECRET_KEY, JWT_SECRET_KEY, GROQ_API_KEY
 FLASK_APP=wsgi.py flask db upgrade
 python run.py
 ```
+Runs on `http://localhost:5000`
 
-The backend runs on `http://localhost:5000`.
-
-> **Required `.env` values:** `SECRET_KEY`, `JWT_SECRET_KEY`, `GROQ_API_KEY`
-> Leave `DATABASE_URL` unset to use a local SQLite file.
-
-### 2. Frontend
-
+### Frontend
 ```bash
 cd frontend
 npm install
-cp .env.example .env            # set VITE_API_URL if needed
 npm run dev
 ```
+Runs on `http://localhost:5173`
 
-The frontend runs on `http://localhost:5173`.
+### Chrome Extension
+Load the `extension/` folder via **Load unpacked** in `chrome://extensions/`. In the extension's Options page, set the API URL to `http://localhost:5000/api`.
 
-### 3. Chrome Extension
+### Environment variables
+See `backend/.env.example` and `frontend/.env.example` for all available configuration options.
 
-1. Open Chrome and go to `chrome://extensions/`
-2. Enable **Developer mode**
-3. Click **Load unpacked** and select the `extension/` folder
-4. Pin the ApplyWise icon to your toolbar
-5. Click the icon on any job posting to start tracking
+---
 
-### 4. Docker (full stack)
+## Contributing
 
-```bash
-cp backend/.env.example backend/.env   # fill in your values
-docker compose up --build
-```
+Pull requests are welcome. For major changes, please open an issue first.
 
-| Service | URL |
-|---|---|
-| Frontend | http://localhost:5173 |
-| Backend API | http://localhost:5000 |
+## License
 
-```bash
-docker compose logs -f   # stream logs
-docker compose down      # stop services
-```
-
-## Deployment
-
-### Backend → Render
-
-1. Create a new **Web Service** on [Render](https://render.com)
-2. Set **Root Directory** to `backend`
-3. Set **Build Command** to `pip install -r requirements.txt`
-4. Set **Start Command** to `flask db upgrade && gunicorn -w 4 -b 0.0.0.0:$PORT wsgi:app`
-5. Add all environment variables from `backend/.env.example` in Render's dashboard
-
-### Frontend → Vercel
-
-1. Import the repo on [Vercel](https://vercel.com)
-2. Set **Root Directory** to `frontend`
-3. Add `VITE_API_URL=https://your-backend.onrender.com/api` as an environment variable
-4. Deploy — Vercel handles the build automatically
-
-> After deploying both, update `ALLOWED_ORIGINS` in your Render backend environment to your Vercel frontend URL.
-
-## Environment Variables
-
-See `backend/.env.example` and `frontend/.env.example` for all required and optional variables with descriptions.
+MIT
