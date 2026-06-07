@@ -1,4 +1,4 @@
-let apiUrl = 'http://localhost:5000/api';
+let apiUrl = APPLYWISE_CONFIG.DEFAULT_API_URL;
 let authToken = null;
 
 document.addEventListener('DOMContentLoaded', async () => {

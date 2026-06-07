@@ -1,5 +1,3 @@
-const DEFAULT_API_URL = 'http://localhost:5000/api';
-
 document.addEventListener('DOMContentLoaded', () => {
   const apiInput    = document.getElementById('api-url-input');
   const saveBtn     = document.getElementById('save-api-btn');
@@ -10,31 +8,25 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.local.get(['apiUrl'], (result) => {
     const saved = result.apiUrl || '';
     apiInput.value = saved;
-    updateDashLink(saved || DEFAULT_API_URL);
+    updateDashLink(saved || APPLYWISE_CONFIG.DEFAULT_API_URL);
   });
 
   saveBtn.addEventListener('click', () => {
     const raw   = apiInput.value.trim();
     const value = raw || null; // null = use default
 
-    const store = value ? { apiUrl: value } : {};
     chrome.storage.local.remove('apiUrl', () => {
       if (value) {
         chrome.storage.local.set({ apiUrl: value }, () => showStatus('Saved!'));
       } else {
-        showStatus('Reset to default (localhost)');
+        showStatus('Reset to production default');
       }
-      updateDashLink(value || DEFAULT_API_URL);
+      updateDashLink(value || APPLYWISE_CONFIG.DEFAULT_API_URL);
     });
   });
 
   function updateDashLink(apiUrl) {
-    try {
-      const base = apiUrl.replace(/\/api\/?$/, '');
-      dashLink.href = base;
-    } catch {
-      dashLink.href = 'http://localhost:5173';
-    }
+    dashLink.href = getDashboardUrlFromApi(apiUrl);
   }
 
   function showStatus(msg) {

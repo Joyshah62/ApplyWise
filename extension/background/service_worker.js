@@ -1,9 +1,9 @@
 // Background service worker
-const DEFAULT_API_URL = 'http://localhost:5000/api';
+importScripts('../config.js');
 
 function getApiUrl() {
   return new Promise(resolve => {
-    chrome.storage.local.get(['apiUrl'], r => resolve(r.apiUrl || DEFAULT_API_URL));
+    chrome.storage.local.get(['apiUrl'], r => resolve(r.apiUrl || APPLYWISE_CONFIG.DEFAULT_API_URL));
   });
 }
 

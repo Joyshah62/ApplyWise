@@ -252,16 +252,13 @@ function initSidebar() {
   const panel = document.createElement('div');
   panel.className = 'panel';
   
-  // Derive dashboard URL from the stored API URL (same logic as options.js)
-  let dashboardSettingsUrl = 'http://localhost:5173/settings';
+  // Derive dashboard URL from stored API URL, or fall back to production default
+  let dashboardSettingsUrl = getSettingsUrlFromApi(APPLYWISE_CONFIG.DEFAULT_API_URL);
   chrome.storage.local.get(['apiUrl'], (result) => {
-    if (result.apiUrl) {
-      const base = result.apiUrl.replace(/\/api\/?$/, '');
-      dashboardSettingsUrl = base + '/settings';
-      // Update all rendered settings links after storage is read
-      panel.querySelectorAll('.settings-link').forEach(a => { a.href = dashboardSettingsUrl; });
-      panel.querySelectorAll('a[data-settings-link]').forEach(a => { a.href = dashboardSettingsUrl; });
-    }
+    const apiUrl = result.apiUrl || APPLYWISE_CONFIG.DEFAULT_API_URL;
+    dashboardSettingsUrl = getSettingsUrlFromApi(apiUrl);
+    panel.querySelectorAll('.settings-link').forEach(a => { a.href = dashboardSettingsUrl; });
+    panel.querySelectorAll('a[data-settings-link]').forEach(a => { a.href = dashboardSettingsUrl; });
   });
 
   panel.innerHTML = `
