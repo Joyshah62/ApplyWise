@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.utils.auth import get_current_user_id
 from datetime import datetime, timedelta
 from sqlalchemy import func
 from app.extensions import db
@@ -11,7 +12,7 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
 
 def require_admin():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     user = User.query.get(user_id)
     if not user or not user.is_admin:
         return None, jsonify({'error': 'Admin access required'}), 403

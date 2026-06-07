@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.utils.auth import get_current_user_id
 from app.models.quick_link import QuickLink
 from app.extensions import db
 
@@ -8,14 +9,14 @@ quick_links_bp = Blueprint('quick_links', __name__, url_prefix='/api/quick-links
 @quick_links_bp.route('', methods=['GET'])
 @jwt_required()
 def get_quick_links():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     links = QuickLink.query.filter_by(user_id=user_id).order_by(QuickLink.id).all()
     return jsonify([link.to_dict() for link in links]), 200
 
 @quick_links_bp.route('', methods=['POST'])
 @jwt_required()
 def create_quick_link():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     data = request.get_json()
     
     if not data or not data.get('title') or not data.get('url'):
@@ -35,7 +36,7 @@ def create_quick_link():
 @quick_links_bp.route('/<int:link_id>', methods=['DELETE'])
 @jwt_required()
 def delete_quick_link(link_id):
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     link = QuickLink.query.filter_by(id=link_id, user_id=user_id).first()
     
     if not link:

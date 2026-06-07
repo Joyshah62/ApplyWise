@@ -1,6 +1,7 @@
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required
+from app.utils.auth import get_current_user_id
 import bcrypt
 from app.extensions import db, limiter
 from app.models.user import User
@@ -59,7 +60,7 @@ def login():
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()
 def get_me():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404

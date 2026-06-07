@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.utils.auth import get_current_user_id
 from app.extensions import db
 from app.models.resume import ResumeVersion
 
@@ -11,7 +12,7 @@ import PyPDF2
 @resumes_bp.route('', methods=['POST'])
 @jwt_required()
 def create_resume():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     
     # Support both JSON and multipart/form-data
     if request.is_json:
@@ -58,14 +59,14 @@ def create_resume():
 @resumes_bp.route('', methods=['GET'])
 @jwt_required()
 def get_resumes():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     resumes = ResumeVersion.query.filter_by(user_id=user_id).order_by(ResumeVersion.created_at.desc()).all()
     return jsonify([resume.to_dict() for resume in resumes]), 200
 
 @resumes_bp.route('/<int:resume_id>', methods=['PUT'])
 @jwt_required()
 def update_resume(resume_id):
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     resume = ResumeVersion.query.filter_by(id=resume_id, user_id=user_id).first()
     if not resume:
         return jsonify({'error': 'Not found'}), 404
@@ -108,7 +109,7 @@ def update_resume(resume_id):
 @resumes_bp.route('/<int:resume_id>', methods=['DELETE'])
 @jwt_required()
 def delete_resume(resume_id):
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     resume = ResumeVersion.query.filter_by(id=resume_id, user_id=user_id).first()
     if not resume:
         return jsonify({'error': 'Not found'}), 404

@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, send_file, current_app
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.utils.auth import get_current_user_id
 from datetime import datetime, date
 from io import BytesIO
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -29,7 +30,7 @@ applications_bp = Blueprint('applications', __name__, url_prefix='/api/applicati
 @applications_bp.route('', methods=['POST'])
 @jwt_required()
 def create_application():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     data = request.get_json()
     
     if not data.get('company_name') or not data.get('job_title') or not data.get('job_url'):
@@ -73,14 +74,14 @@ def create_application():
 @applications_bp.route('', methods=['GET'])
 @jwt_required()
 def get_applications():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     applications = Application.query.filter_by(user_id=user_id).order_by(Application.created_at.desc()).all()
     return jsonify([app.to_dict() for app in applications]), 200
 
 @applications_bp.route('/<int:app_id>', methods=['GET'])
 @jwt_required()
 def get_application(app_id):
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     application = Application.query.filter_by(id=app_id, user_id=user_id).first()
     if not application:
         return jsonify({'error': 'Not found'}), 404
@@ -89,7 +90,7 @@ def get_application(app_id):
 @applications_bp.route('/<int:app_id>', methods=['PUT'])
 @jwt_required()
 def update_application(app_id):
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     application = Application.query.filter_by(id=app_id, user_id=user_id).first()
     if not application:
         return jsonify({'error': 'Not found'}), 404
@@ -132,7 +133,7 @@ def update_application(app_id):
 @applications_bp.route('/<int:app_id>', methods=['DELETE'])
 @jwt_required()
 def delete_application(app_id):
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     application = Application.query.filter_by(id=app_id, user_id=user_id).first()
     if not application:
         return jsonify({'error': 'Not found'}), 404
@@ -144,7 +145,7 @@ def delete_application(app_id):
 @applications_bp.route('/ai-usage', methods=['GET'])
 @jwt_required()
 def get_ai_usage():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     limit = current_app.config['DAILY_AI_LIMIT']
     used = _ai_calls_today(user_id)
     return jsonify({'used': used, 'limit': limit, 'remaining': max(0, limit - used)}), 200
@@ -156,7 +157,7 @@ def analyze_application():
     from app.models.resume import ResumeVersion
     from app.services.llm_service import analyze_resume_fit
 
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     allowed, used, limit = _check_ai_limit(user_id)
     if not allowed:
         return jsonify({'error': f'Daily AI limit reached ({limit} calls/day). Resets at midnight.', 'used': used, 'limit': limit}), 429
@@ -193,7 +194,7 @@ def generate_cover_letter():
     from app.models.resume import ResumeVersion
     from app.services.llm_service import generate_cover_letter as gen_cover_letter
 
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     allowed, used, limit = _check_ai_limit(user_id)
     if not allowed:
         return jsonify({'error': f'Daily AI limit reached ({limit} calls/day). Resets at midnight.', 'used': used, 'limit': limit}), 429
@@ -300,7 +301,7 @@ def download_cover_letter_docx():
 def refine_cover_letter():
     from app.services.llm_service import refine_cover_letter as refine
 
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     allowed, used, limit = _check_ai_limit(user_id)
     if not allowed:
         return jsonify({'error': f'Daily AI limit reached ({limit} calls/day). Resets at midnight.', 'used': used, 'limit': limit}), 429

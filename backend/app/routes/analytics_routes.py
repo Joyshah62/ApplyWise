@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.utils.auth import get_current_user_id
 from app.models.application import Application
 from app.extensions import db
 from sqlalchemy import func
@@ -9,7 +10,7 @@ analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
 @analytics_bp.route('/summary', methods=['GET'])
 @jwt_required()
 def get_summary():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     
     total = Application.query.filter_by(user_id=user_id).count()
     
@@ -35,7 +36,7 @@ def get_summary():
 @analytics_bp.route('/by-status', methods=['GET'])
 @jwt_required()
 def get_by_status():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     status_counts = db.session.query(
         Application.status, func.count(Application.id)
     ).filter_by(user_id=user_id).group_by(Application.status).all()
@@ -45,7 +46,7 @@ def get_by_status():
 @analytics_bp.route('/by-portal', methods=['GET'])
 @jwt_required()
 def get_by_portal():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     portal_counts = db.session.query(
         Application.portal, func.count(Application.id)
     ).filter_by(user_id=user_id).group_by(Application.portal).all()
