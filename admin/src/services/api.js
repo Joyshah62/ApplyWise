@@ -11,7 +11,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    if (err.response?.status === 401 || err.response?.status === 403) {
+    if (err.response?.status === 401 || err.response?.status === 403 || err.response?.status === 422) {
       localStorage.removeItem('admin_token');
       window.location.href = '/login';
     }
