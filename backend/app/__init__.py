@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 from app.config import Config
 from app.extensions import db, jwt, migrate, limiter
@@ -16,7 +16,13 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     limiter.init_app(app)
 
+    # Lightweight health check endpoint to prevent Render spin-down
+    @app.route('/api/health', methods=['GET'])
+    def health_check():
+        return jsonify({"status": "healthy"}), 200
+
     from app.routes import register_routes
     register_routes(app)
 
     return app
+
