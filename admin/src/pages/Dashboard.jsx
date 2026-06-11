@@ -23,16 +23,46 @@ function StatCard({ label, value, sub, icon: Icon, color }) {
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const fetchStats = () => {
+    setLoading(true);
+    setError(null);
     api.get('/admin/stats')
       .then(r => setStats(r.data))
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        setError(err.response?.data?.error || err.message || 'Failed to connect to backend.');
+      })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchStats();
   }, []);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-slate-500">Loading…</div>;
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-4">
+        <div className="text-red-400 font-semibold text-lg">⚠️ Connection Error</div>
+        <p className="text-slate-400 text-sm max-w-md">
+          {error || 'Could not load dashboard statistics.'}
+        </p>
+        <p className="text-slate-500 text-xs max-w-sm">
+          If your Flask backend is deployed on Render's free tier, it may take 1-2 minutes to spin up after periods of inactivity.
+        </p>
+        <button
+          onClick={fetchStats}
+          className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition-all shadow-md shadow-indigo-900/20 active:scale-95"
+        >
+          Try Again
+        </button>
+      </div>
+    );
   }
 
   const aiBar = [
