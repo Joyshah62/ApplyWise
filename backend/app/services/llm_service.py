@@ -2,11 +2,60 @@ import os
 import json
 from groq import Groq
 
+class GroqFallbackClient:
+    @property
+    def chat(self):
+        return self
+
+    @property
+    def completions(self):
+        return self
+
+    def create(self, **kwargs):
+        keys = []
+        primary = os.getenv("GROQ_API_KEY")
+        if primary:
+            keys.append(primary)
+        
+        # Retrieve fallback keys from environment variables to avoid hardcoding secrets
+        for i in range(1, 10):
+            fb_key = os.getenv(f"GROQ_API_KEY_FALLBACK_{i}")
+            if fb_key:
+                keys.append(fb_key)
+                
+        # Also support a comma-separated list of keys
+        comma_keys = os.getenv("GROQ_API_KEYS")
+        if comma_keys:
+            for k in comma_keys.split(","):
+                cleaned = k.strip()
+                if cleaned:
+                    keys.append(cleaned)
+
+        # Deduplicate keys while maintaining order
+        seen = set()
+        deduped_keys = []
+        for key in keys:
+            if key not in seen:
+                seen.add(key)
+                deduped_keys.append(key)
+                
+        if not deduped_keys:
+            raise ValueError("No GROQ_API_KEY environment variable is set and no fallback keys are available.")
+
+        last_exception = None
+        for key in deduped_keys:
+            try:
+                real_client = Groq(api_key=key)
+                return real_client.chat.completions.create(**kwargs)
+            except Exception as e:
+                masked_key = f"{key[:8]}...{key[-4:]}" if len(key) > 12 else "invalid_key"
+                print(f"Groq API call failed with key {masked_key}: {e}")
+                last_exception = e
+                continue
+        raise last_exception
+
 def _client():
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        raise ValueError("GROQ_API_KEY environment variable is not set. Please add it to your .env file.")
-    return Groq(api_key=api_key)
+    return GroqFallbackClient()
 
 def analyze_resume_fit(job_description, resume_text):
     """
