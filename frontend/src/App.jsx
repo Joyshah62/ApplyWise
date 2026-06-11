@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Applications from './pages/Applications';
 import Resumes from './pages/Resumes';
 import Settings from './pages/Settings';
+import TailorResume from './pages/TailorResume';
 
 function PrivateRoute({ children }) {
   const { currentUser } = useAuth();
@@ -27,6 +28,7 @@ function AppRoutes() {
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={<Dashboard />} />
         <Route path="applications" element={<Applications />} />
+        <Route path="applications/:appId/tailor" element={<TailorResume />} />
         <Route path="resumes" element={<Resumes />} />
         <Route path="settings" element={<Settings />} />
       </Route>

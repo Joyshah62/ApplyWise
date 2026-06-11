@@ -159,3 +159,153 @@ def refine_cover_letter(current_letter, instruction, job_description, company_na
         temperature=0.4,
     )
     return response.choices[0].message.content.strip()
+
+
+def _extract_latex_document(text):
+    """Pull a complete LaTeX document out of an LLM response.
+
+    Models sometimes wrap output in markdown fences or add commentary;
+    extract everything from \\documentclass through \\end{document}.
+    Returns None if no complete document is found.
+    """
+    start = text.find('\\documentclass')
+    end = text.rfind('\\end{document}')
+    if start == -1 or end == -1 or end < start:
+        return None
+    return text[start:end + len('\\end{document}')]
+
+
+def generate_tailored_resume(job_description, company_name, job_title, resume_text):
+    """Generate a complete LaTeX resume tailored to a job description.
+
+    Fills Jake's Resume template with the candidate's real resume content,
+    rewriting bullets to emphasize the skills the job description asks for.
+    Returns the full .tex source.
+    """
+    from app.services.latex_service import JAKES_TEMPLATE
+
+    prompt = f"""
+    You are an expert resume writer and ATS specialist who is also fluent in LaTeX.
+
+    Below is a LaTeX resume template (Jake's Resume template), the candidate's actual resume
+    content, and a job description they are applying to.
+
+    Rebuild the template using ONLY the candidate's real information, tailored to the job:
+
+    1. Replace ALL placeholder content in the template (Jake Ryan's name, contact info,
+       education, experience, projects, skills) with the candidate's actual details from
+       their resume below. Never leave any of Jake Ryan's example content in the output.
+    2. Keep the template's preamble, custom commands, and overall structure exactly as-is.
+       Only change the content between \\begin{{document}} and \\end{{document}}.
+    3. Tailor the content to the job description: reorder and reword bullet points to
+       emphasize the most relevant experience, and naturally weave in keywords from the
+       job description where the candidate genuinely has that experience.
+    4. Do NOT invent experience, employers, degrees, dates, or skills the candidate does
+       not have. Rewording and emphasis only.
+    5. Escape LaTeX special characters in content: use \\& for &, \\% for %, \\$ for $,
+       \\# for #. Do not use unicode characters; use LaTeX equivalents.
+    6. The resume must fit on one page — be concise, keep 2-4 bullets per role.
+    7. If the candidate's resume is missing a section (e.g. no projects), omit that section.
+
+    TEMPLATE:
+    {JAKES_TEMPLATE}
+
+    CANDIDATE'S RESUME:
+    {resume_text}
+
+    TARGET ROLE: {job_title} at {company_name}
+
+    JOB DESCRIPTION:
+    {job_description}
+
+    Output ONLY the complete LaTeX document, starting with \\documentclass and ending with
+    \\end{{document}}. No explanations, no markdown fences.
+    """
+
+    response = _client().chat.completions.create(
+        messages=[
+            {"role": "system", "content": "You are a LaTeX resume generator. Output only a complete, compilable LaTeX document."},
+            {"role": "user", "content": prompt},
+        ],
+        model="llama-3.3-70b-versatile",
+        temperature=0.3,
+        max_tokens=8000,
+    )
+    raw = response.choices[0].message.content
+    latex = _extract_latex_document(raw)
+    if not latex:
+        raise ValueError("LLM did not return a complete LaTeX document. Please try again.")
+    return latex
+
+
+def chat_edit_resume(current_latex, message, history, job_description):
+    """Interactive chat editing of a tailored LaTeX resume.
+
+    Returns (reply, updated_latex) — updated_latex is None when the user's
+    message didn't require changing the document (e.g. a question).
+    """
+    system = """You are an expert resume editor fluent in LaTeX, helping a candidate refine their resume for a specific job.
+
+The user will give you their current LaTeX resume and an instruction or question.
+
+Respond in EXACTLY this format:
+- First, 1-3 sentences to the user: what you changed, or the answer to their question. Plain text, no markdown.
+- Then, ONLY if the document needs to change, the complete updated LaTeX document between these exact markers:
+<<<LATEX
+(full document from \\documentclass to \\end{document})
+LATEX>>>
+
+Rules:
+- Always output the ENTIRE document inside the markers, never a fragment or diff.
+- Keep the preamble and custom commands intact; edit only content unless asked otherwise.
+- Never invent experience, employers, degrees, dates, or skills the candidate does not have.
+- Never add a skill or technology to the resume just because the job description mentions it — only if the user explicitly asks or it already appears in the resume.
+- Escape LaTeX special characters (\\&, \\%, \\$, \\#) and keep the resume to one page.
+- If the user asks a question that needs no edit, reply without a LATEX block."""
+
+    messages = [{"role": "system", "content": system}]
+    # Replay recent conversation for context (replies only — the latex itself
+    # is sent fresh each turn to keep the context small and current).
+    for turn in (history or [])[-8:]:
+        if turn.get('role') in ('user', 'assistant') and turn.get('content'):
+            messages.append({"role": turn['role'], "content": turn['content']})
+
+    messages.append({
+        "role": "user",
+        "content": f"""JOB DESCRIPTION (for context):
+{job_description}
+
+CURRENT LATEX RESUME:
+{current_latex}
+
+MY REQUEST: {message}""",
+    })
+
+    response = _client().chat.completions.create(
+        messages=messages,
+        model="llama-3.3-70b-versatile",
+        temperature=0.3,
+        max_tokens=8000,
+    )
+    raw = response.choices[0].message.content
+
+    updated_latex = None
+    reply = raw.strip()
+    if '<<<LATEX' in raw:
+        reply = raw.split('<<<LATEX')[0].strip()
+        block = raw.split('<<<LATEX', 1)[1]
+        block = block.split('LATEX>>>')[0] if 'LATEX>>>' in block else block
+        updated_latex = _extract_latex_document(block)
+        if not updated_latex:
+            reply = (reply + "\n\n(I couldn't apply that change cleanly — please try rephrasing.)").strip()
+    else:
+        # Model sometimes skips the markers but still outputs a document
+        maybe_doc = _extract_latex_document(raw)
+        if maybe_doc:
+            updated_latex = maybe_doc
+            reply = raw[:raw.find('\\documentclass')].strip() or "Done — I've updated the resume."
+
+    if not reply:
+        reply = "Done — I've updated the resume." if updated_latex else "Sorry, I couldn't process that. Please try again."
+
+    return reply, updated_latex

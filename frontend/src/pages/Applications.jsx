@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { format } from 'date-fns';
-import { Plus, Edit2, Trash2, ExternalLink, Sparkles, FileText, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Edit2, Trash2, ExternalLink, Sparkles, FileText, Download, ChevronDown, ChevronUp, Wand2 } from 'lucide-react';
 import ApplicationModal from '../components/ApplicationModal';
 import AnalysisPanel from '../components/AnalysisPanel';
 import CoverLetterPanel from '../components/CoverLetterPanel';
@@ -234,6 +235,13 @@ export default function Applications() {
                         >
                           <FileText className="w-4 h-4 inline" />
                         </button>
+                        <Link
+                          to={`/applications/${app.id}/tailor`}
+                          title="Tailor Resume with AI"
+                          className="inline-block text-slate-400 hover:text-purple-600 transition-colors"
+                        >
+                          <Wand2 className="w-4 h-4 inline" />
+                        </Link>
                         <button onClick={() => handleEdit(app)} className="text-slate-400 hover:text-indigo-600 transition-colors">
                           <Edit2 className="w-4 h-4 inline" />
                         </button>

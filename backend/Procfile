@@ -1,1 +1,1 @@
-web: flask db upgrade && gunicorn -w 4 -b 0.0.0.0:$PORT wsgi:app
+web: flask db upgrade && gunicorn -w 4 --timeout 120 -b 0.0.0.0:$PORT wsgi:app
